@@ -1,0 +1,43 @@
+#!/usr/bin/python2.7
+import os
+import sys
+import re
+import subprocess
+from optparse import OptionParser
+
+status = None
+
+parser = OptionParser()
+parser.add_option('-s', '--service', dest='service', action='store', type='string', help='service name that you want to monitor')
+(options, args) = parser.parse_args()
+
+if options.service is None:
+	print('Service is not defined')
+	sys.exit(3)
+
+p = subprocess.Popen(['systemctl', 'status', options.service + '.service'],
+                     stdout=subprocess.PIPE,
+                     stderr=subprocess.STDOUT,
+                     shell=False,
+                    )
+(output, err) = p.communicate()
+
+for line in output.split('\n'):
+	m = re.search('^\s+Active:\s+([a-zA-Z]+)\s+\(', line)
+	if m:   
+		comment = line.strip()
+		status  = m.group(1)
+		break
+
+if status == 'active':
+	print 'OK - ' + comment
+	sys.exit(0)
+elif status == 'inactive':
+	print 'WARNING - ' + comment
+	sys.exit(1)
+elif status == 'failed':
+	print 'CRITICAL - ' + comment
+	sys.exit(2)
+else:   
+	print 'UKNOWN - ' + comment
+	sys.exit(3)
